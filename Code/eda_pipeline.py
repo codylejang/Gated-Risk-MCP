@@ -4,24 +4,15 @@ import argparse
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import matplotlib.pyplot as plt
-
-try:
-    from datasets import load_from_disk
-except ImportError:  # pragma: no cover
-    load_from_disk = None
-
-try:
-    from PIL import Image
-except ImportError:  # pragma: no cover
-    Image = None
+from datasets import DatasetDict, load_from_disk
+from PIL import Image
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 TEXT_KEYS = {"text", "word", "words", "value", "label", "menu", "item", "name", "nm", "cnt", "price"}
-SPLIT_NAMES = ("train", "validation", "valid", "val", "test")
 
 
 def parse_args() -> argparse.Namespace:
@@ -33,14 +24,6 @@ def parse_args() -> argparse.Namespace:
 
 def normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip())
-
-
-def split_from_path(path: Path) -> str:
-    lowered = {part.lower() for part in path.parts}
-    for split in SPLIT_NAMES:
-        if split in lowered:
-            return "validation" if split in {"validation", "valid", "val"} else split
-    return "unknown"
 
 
 def read_json(path: Path) -> Any | None:
@@ -60,6 +43,16 @@ def read_image_size(path: Path) -> tuple[int | None, int | None]:
             return image.size
     except Exception:
         return None, None
+
+
+def extract_image_size(image: Any) -> tuple[int, int] | None:
+    size = getattr(image, "size", None)
+    if not isinstance(size, tuple) or len(size) != 2:
+        return None
+    width, height = size
+    if isinstance(width, int) and isinstance(height, int):
+        return width, height
+    return None
 
 
 def collect_strings(obj: Any, parent_key: str = "") -> list[tuple[str, str]]:
@@ -91,14 +84,22 @@ def load_cord(data_dir: Path) -> tuple[list[int], list[tuple[int, int]]]:
     text_counts: list[int] = []
     image_sizes: list[tuple[int, int]] = []
 
-    if (cord_root / "dataset_dict.json").exists() and load_from_disk is not None:
-        for split_dataset in load_from_disk(str(cord_root)).values():
+    if (cord_root / "dataset_dict.json").exists():
+        loaded_dataset = load_from_disk(str(cord_root))
+        split_datasets = (
+            loaded_dataset.values()
+            if isinstance(loaded_dataset, DatasetDict)
+            else [cast(Any, loaded_dataset)]
+        )
+
+        for split_dataset in split_datasets:
             for row in split_dataset:
-                payload = json.loads(row["ground_truth"])
+                row_data = cast(dict[str, Any], row)
+                payload = json.loads(str(row_data.get("ground_truth", "{}")))
                 text_counts.append(text_count_from_payload(payload))
-                image = row.get("image")
-                if image is not None and getattr(image, "size", None):
-                    image_sizes.append(image.size)
+                image_size = extract_image_size(row_data.get("image"))
+                if image_size:
+                    image_sizes.append(image_size)
         return text_counts, image_sizes
 
     for json_path in cord_root.rglob("*.json"):
@@ -128,10 +129,7 @@ def load_sroie(data_dir: Path) -> tuple[list[int], list[tuple[int, int]]]:
     for text_path in sroie_root.rglob("*.txt"):
         if text_path.parent == sroie_root:
             continue
-        try:
-            raw_text = text_path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            raw_text = text_path.read_text(encoding="latin-1")
+        raw_text = text_path.read_text(encoding="utf-8", errors="ignore")
         text_counts.append(sum(1 for line in raw_text.splitlines() if normalize_text(line)))
 
     for image_path in sroie_root.rglob("*"):
