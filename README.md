@@ -9,6 +9,36 @@ This project builds a cost-sensitive decision system for automated receipt extra
 Core idea:
 image → extraction → risk score → (accept vs verify)
 
+## Stage 1 Baseline
+
+The repo now includes a simple layout-aware extraction pipeline for SROIE in
+`src/sroie_vlm.py`.
+
+Two model options are available:
+
+- `logistic`: a lightweight interpretable baseline
+- `mlp`: a small PyTorch neural network scorer suitable for a neural-networks course
+
+Both versions:
+
+- build candidate field values directly from OCR lines and short line spans
+- score them using text, layout, and anchor features
+- output field-level confidence, score margins, and receipt-level summary tables
+
+Run it with:
+
+```bash
+python src/train_sroie_vlm.py --model-type logistic
+python src/train_sroie_vlm.py --model-type mlp
+```
+
+By default, outputs are written to:
+
+- `Outputs/sroie_extraction/logistic_baseline/`
+- `Outputs/sroie_extraction/mlp_neural/`
+
+Those tables can be reused directly by the later risk-model and verification stages.
+
 ## Datasets
 
 - CORD: ~11k receipts with OCR text, layout, and structured labels  

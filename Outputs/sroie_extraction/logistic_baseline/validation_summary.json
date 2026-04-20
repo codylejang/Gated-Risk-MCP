@@ -1,0 +1,68 @@
+{
+  "validation_summary": {
+    "overall": {
+      "field_accuracy": 0.8227611940298507,
+      "recoverable_field_accuracy": 0.8384030418250951,
+      "mean_confidence": 0.9150702656537029,
+      "mean_margin": 0.1534256243463096
+    },
+    "by_field": {
+      "company": {
+        "field_accuracy": 0.9477611940298507,
+        "recoverable_accuracy": 0.9621212121212122,
+        "recoverable_rate": 0.9850746268656716,
+        "mean_confidence": 0.9819181454457494,
+        "mean_margin": 0.021269534481672167
+      },
+      "date": {
+        "field_accuracy": 0.9477611940298507,
+        "recoverable_accuracy": 0.9921875,
+        "recoverable_rate": 0.9552238805970149,
+        "mean_confidence": 0.9243390154536646,
+        "mean_margin": 0.5414071756746316
+      },
+      "address": {
+        "field_accuracy": 0.8283582089552238,
+        "recoverable_accuracy": 0.8345864661654135,
+        "recoverable_rate": 0.9925373134328358,
+        "mean_confidence": 0.9841017987705065,
+        "mean_margin": 0.008026002873080373
+      },
+      "total": {
+        "field_accuracy": 0.5671641791044776,
+        "recoverable_accuracy": 0.5714285714285714,
+        "recoverable_rate": 0.9925373134328358,
+        "mean_confidence": 0.7699221029448914,
+        "mean_margin": 0.042999784355854304
+      }
+    }
+  },
+  "training_stats": {
+    "company": {
+      "fitted_docs": 533.0,
+      "skipped_docs": 2.0,
+      "candidate_rows": 12690.0,
+      "positive_rows": 1865.0
+    },
+    "date": {
+      "fitted_docs": 516.0,
+      "skipped_docs": 19.0,
+      "candidate_rows": 1361.0,
+      "positive_rows": 972.0
+    },
+    "address": {
+      "fitted_docs": 533.0,
+      "skipped_docs": 2.0,
+      "candidate_rows": 44117.0,
+      "positive_rows": 3063.0
+    },
+    "total": {
+      "fitted_docs": 532.0,
+      "skipped_docs": 3.0,
+      "candidate_rows": 7089.0,
+      "positive_rows": 1449.0
+    }
+  },
+  "n_eval_train_records": 535,
+  "n_eval_holdout_records": 134
+}

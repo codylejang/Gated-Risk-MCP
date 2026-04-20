@@ -1,0 +1,73 @@
+{
+  "model_type": "mlp",
+  "validation_summary": {
+    "overall": {
+      "field_accuracy": 0.8955223880597015,
+      "recoverable_field_accuracy": 0.9125475285171103,
+      "mean_confidence": 0.9283875209088799,
+      "mean_margin": 0.15724612468793125
+    },
+    "by_field": {
+      "company": {
+        "field_accuracy": 0.9328358208955224,
+        "recoverable_accuracy": 0.946969696969697,
+        "recoverable_rate": 0.9850746268656716,
+        "mean_confidence": 0.9853089838775236,
+        "mean_margin": 0.01640499305369249
+      },
+      "date": {
+        "field_accuracy": 0.9552238805970149,
+        "recoverable_accuracy": 1.0,
+        "recoverable_rate": 0.9552238805970149,
+        "mean_confidence": 0.9208338915355961,
+        "mean_margin": 0.5423312744747112
+      },
+      "address": {
+        "field_accuracy": 0.9701492537313433,
+        "recoverable_accuracy": 0.9774436090225563,
+        "recoverable_rate": 0.9925373134328358,
+        "mean_confidence": 0.9816638511508259,
+        "mean_margin": 0.010135090061977728
+      },
+      "total": {
+        "field_accuracy": 0.7238805970149254,
+        "recoverable_accuracy": 0.7293233082706767,
+        "recoverable_rate": 0.9925373134328358,
+        "mean_confidence": 0.825743357071574,
+        "mean_margin": 0.06011314116134355
+      }
+    }
+  },
+  "training_stats": {
+    "company": {
+      "fitted_docs": 533.0,
+      "skipped_docs": 2.0,
+      "candidate_rows": 12690.0,
+      "positive_rows": 1865.0,
+      "best_val_loss": 0.11974357813596725
+    },
+    "date": {
+      "fitted_docs": 516.0,
+      "skipped_docs": 19.0,
+      "candidate_rows": 1361.0,
+      "positive_rows": 972.0,
+      "best_val_loss": 0.025707047432661057
+    },
+    "address": {
+      "fitted_docs": 533.0,
+      "skipped_docs": 2.0,
+      "candidate_rows": 44117.0,
+      "positive_rows": 3063.0,
+      "best_val_loss": 0.17979584634304047
+    },
+    "total": {
+      "fitted_docs": 532.0,
+      "skipped_docs": 3.0,
+      "candidate_rows": 7089.0,
+      "positive_rows": 1449.0,
+      "best_val_loss": 0.7597788572311401
+    }
+  },
+  "n_eval_train_records": 535,
+  "n_eval_holdout_records": 134
+}

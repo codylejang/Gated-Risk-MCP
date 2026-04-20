@@ -1,0 +1,47 @@
+{
+  "model_type": "mlp",
+  "n_labeled_train_records": 669,
+  "n_public_test_records": 360,
+  "training_stats": {
+    "company": {
+      "fitted_docs": 665.0,
+      "skipped_docs": 4.0,
+      "candidate_rows": 15800.0,
+      "positive_rows": 2325.0,
+      "best_val_loss": 0.1721459925174713
+    },
+    "date": {
+      "fitted_docs": 644.0,
+      "skipped_docs": 25.0,
+      "candidate_rows": 1700.0,
+      "positive_rows": 1209.0,
+      "best_val_loss": 0.26737141609191895
+    },
+    "address": {
+      "fitted_docs": 666.0,
+      "skipped_docs": 3.0,
+      "candidate_rows": 54751.0,
+      "positive_rows": 3821.0,
+      "best_val_loss": 0.20029421150684357
+    },
+    "total": {
+      "fitted_docs": 665.0,
+      "skipped_docs": 4.0,
+      "candidate_rows": 8899.0,
+      "positive_rows": 1812.0,
+      "best_val_loss": 0.7546267509460449
+    }
+  },
+  "max_span_lines": 3,
+  "eval_ratio": 0.2,
+  "random_state": 42,
+  "hidden_dims": [
+    64,
+    32
+  ],
+  "learning_rate": 0.001,
+  "batch_size": 256,
+  "epochs": 5,
+  "dropout": 0.1,
+  "weight_decay": 0.0001
+}

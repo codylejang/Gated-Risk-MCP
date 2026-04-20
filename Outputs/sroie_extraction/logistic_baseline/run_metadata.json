@@ -1,0 +1,33 @@
+{
+  "n_labeled_train_records": 669,
+  "n_public_test_records": 360,
+  "training_stats": {
+    "company": {
+      "fitted_docs": 665.0,
+      "skipped_docs": 4.0,
+      "candidate_rows": 15800.0,
+      "positive_rows": 2325.0
+    },
+    "date": {
+      "fitted_docs": 644.0,
+      "skipped_docs": 25.0,
+      "candidate_rows": 1700.0,
+      "positive_rows": 1209.0
+    },
+    "address": {
+      "fitted_docs": 666.0,
+      "skipped_docs": 3.0,
+      "candidate_rows": 54751.0,
+      "positive_rows": 3821.0
+    },
+    "total": {
+      "fitted_docs": 665.0,
+      "skipped_docs": 4.0,
+      "candidate_rows": 8899.0,
+      "positive_rows": 1812.0
+    }
+  },
+  "max_span_lines": 3,
+  "eval_ratio": 0.2,
+  "random_state": 42
+}
