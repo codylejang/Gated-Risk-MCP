@@ -2,6 +2,24 @@ import pandas as pd
 from typing import Any
 import re
 
+
+def add_derived_features(df: pd.DataFrame) -> pd.DataFrame:
+    """add ratio and aggregate features based on eda insights."""
+    df = df.copy()
+
+    df["token_box_ratio"] = df["n_tokens"] / df["n_boxes"].clip(lower=1)
+    df["amount_token_ratio"] = df["n_amount_like_tokens"] / df["n_tokens"].clip(lower=1)
+    df["date_token_ratio"] = df["n_date_like_tokens"] / df["n_tokens"].clip(lower=1)
+
+    df["anchors_present_count"] = (
+        df["has_total_anchor"].astype(int)
+        + df["has_date_anchor"].astype(int)
+        + df["has_cash_anchor"].astype(int)
+    )
+
+    return df
+
+
 def sroie_feature_dataframe(records: list[Any]) -> pd.DataFrame:
     rows = []
 
