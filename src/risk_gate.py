@@ -27,27 +27,36 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.data_utils import load_sroie_split, DocumentRecord
-from src.sroie_features import sroie_feature_dataframe, add_derived_features
+from src.sroie_features import (
+    sroie_feature_dataframe,
+    add_derived_features,
+    sroie_proxy_label_dataframe,
+)
 
 
 # feature columns used for model input
 FEATURE_COLS = [
     "n_tokens",
     "n_boxes",
+    "ocr_char_count",
+    "ocr_word_count",
     "company_len",
     "date_len",
     "address_len",
     "total_len",
-    "exact_total_matches",
     "n_amount_like_tokens",
     "n_date_like_tokens",
-    "has_total_anchor",
-    "has_date_anchor",
-    "has_cash_anchor",
     "token_box_ratio",
     "amount_token_ratio",
     "date_token_ratio",
+    "avg_token_len",
+    "avg_words_per_token",
     "anchors_present_count",
+    "fields_present_count",
+    "aspect_ratio",
+    "has_total_anchor",
+    "has_date_anchor",
+    "has_cash_anchor",
 ]
 
 
@@ -64,40 +73,19 @@ class RiskGateConfig:
     learning_rate: float = 0.1
 
 
-def compute_risk_label(row: pd.Series) -> int:
-    """
-    derive risk label from extraction quality signals.
-    risk=1 if extraction is likely unreliable.
-    based on eda findings: address match often fails, total ambiguity matters.
-    """
-    risk_signals = 0
+def _ensure_feature_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure derived features exist and required model columns are present."""
+    df = df.copy()
 
-    # field not found in ocr is risky
-    if row.get("company_present") and not row.get("company_in_ocr"):
-        risk_signals += 1
-    if row.get("date_present") and not row.get("date_in_ocr"):
-        risk_signals += 1
-    if row.get("address_present") and not row.get("address_in_ocr"):
-        risk_signals += 1
-    if row.get("total_present") and not row.get("total_in_ocr"):
-        risk_signals += 1
+    missing_feature_cols = [col for col in FEATURE_COLS if col not in df.columns]
+    if missing_feature_cols:
+        df = add_derived_features(df)
 
-    # ambiguity: multiple exact matches or too many amount-like tokens
-    if row.get("exact_total_matches", 0) > 2:
-        risk_signals += 1
-    if row.get("n_amount_like_tokens", 0) > 15:
-        risk_signals += 1
+    missing_feature_cols = [col for col in FEATURE_COLS if col not in df.columns]
+    if missing_feature_cols:
+        raise ValueError(f"missing required feature columns: {missing_feature_cols}")
 
-    # missing anchors when field expected
-    if row.get("total_present") and not row.get("has_total_anchor"):
-        risk_signals += 1
-
-    # extreme token counts (from eda: median ~50 for sroie)
-    n_tokens = row.get("n_tokens", 0)
-    if n_tokens < 15 or n_tokens > 120:
-        risk_signals += 1
-
-    return 1 if risk_signals >= 2 else 0
+    return df
 
 
 def train_risk_gate(
@@ -111,16 +99,17 @@ def train_risk_gate(
     if config is None:
         config = RiskGateConfig()
 
-    # build feature dataframe
+    # build finalized feature dataframe
     df = sroie_feature_dataframe(records)
-    df = add_derived_features(df)
+    df = _ensure_feature_dataframe(df)
 
-    # compute risk labels
-    df["risk_label"] = df.apply(compute_risk_label, axis=1)
+    # build canonical proxy labels from the finalized feature table
+    label_df = sroie_proxy_label_dataframe(df)
+    df = df.merge(label_df, on="doc_id", how="left")
 
     # prepare features and labels
     X = df[FEATURE_COLS].values.astype(np.float32)
-    y = df["risk_label"].values
+    y = df["proxy_verify"].astype(int).values
 
     # train/val split
     X_train, X_val, y_train, y_val = train_test_split(
@@ -241,7 +230,7 @@ class RiskGate:
         score a dataframe of documents.
         returns list of dicts with risk_score and action.
         """
-        df = add_derived_features(df)
+        df = _ensure_feature_dataframe(df)
         X = df[self._feature_cols].values.astype(np.float32)
         probs = self._model.predict_proba(X)[:, 1]
 
@@ -265,7 +254,7 @@ class RiskGate:
             return "human_required"
 
     def score(self, ocr_tokens: list[str], bboxes: list[list[int]], fields: dict[str, Any]) -> dict[str, Any]:
-        """mcp-compatible scoring interface."""
+        """MCP-compatible scoring interface; fields should be candidate extracted values."""
         record = DocumentRecord(
             doc_id="inference",
             dataset="inference",
@@ -318,6 +307,13 @@ def run_inference(
         print(f"split '{split}' not found, falling back to train")
         records = load_sroie_split("train", data_root=data_root)
     print(f"loaded {len(records)} records")
+
+    n_with_fields = sum(bool(record.fields) for record in records)
+    if n_with_fields == 0:
+        raise ValueError(
+            "run_inference requires records that already contain candidate extracted fields. "
+            "Raw SROIE test receipts without fields cannot be meaningfully scored by the risk gate."
+        )
 
     print("loading risk gate model")
     gate = RiskGate(model_path)
