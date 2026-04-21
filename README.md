@@ -39,6 +39,25 @@ By default, outputs are written to:
 
 Those tables can be reused directly by the later risk-model and verification stages.
 
+## Stage 2 Risk + Verification
+
+Train a receipt-level risk gate from the extraction outputs with:
+
+```bash
+python src/train_sroie_risk.py
+```
+
+By default this consumes the MLP extractor outputs from
+`Outputs/sroie_extraction/mlp_neural/` and writes:
+
+- `Outputs/sroie_risk/mlp_extractor_logistic_gate/risk_summary.json`
+- `Outputs/sroie_risk/mlp_extractor_logistic_gate/validation_receipt_risk_predictions.csv`
+- `Outputs/sroie_risk/mlp_extractor_logistic_gate/public_test_gate_decisions.csv`
+
+The learned gate uses logistic regression on receipt-level confidence and margin
+features. It is compared against a simple heuristic gate based on low confidence
+and low margin fields.
+
 ## Datasets
 
 - CORD: ~11k receipts with OCR text, layout, and structured labels  

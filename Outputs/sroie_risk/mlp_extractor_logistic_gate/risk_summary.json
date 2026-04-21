@@ -1,0 +1,72 @@
+{
+  "extractor_dir": "Outputs/sroie_extraction/mlp_neural",
+  "target_recall": 0.9,
+  "learned_gate": {
+    "selected_threshold": {
+      "threshold": 0.3778306081598235,
+      "recall": 0.9,
+      "precision": 0.4430051813471503,
+      "verify_rate": 0.5769805680119582
+    },
+    "train_metrics": {
+      "threshold": 0.3778306081598235,
+      "tp": 171.0,
+      "fp": 215.0,
+      "tn": 264.0,
+      "fn": 19.0,
+      "precision": 0.4430051813471503,
+      "recall": 0.9,
+      "verify_rate": 0.5769805680119582,
+      "false_accept_rate": 0.1,
+      "safe_accept_rate": 0.5511482254697286,
+      "accuracy": 0.6502242152466368
+    },
+    "validation_metrics": {
+      "threshold": 0.3778306081598235,
+      "tp": 37.0,
+      "fp": 44.0,
+      "tn": 44.0,
+      "fn": 9.0,
+      "precision": 0.4567901234567901,
+      "recall": 0.8043478260869565,
+      "verify_rate": 0.6044776119402985,
+      "false_accept_rate": 0.1956521739130435,
+      "safe_accept_rate": 0.5,
+      "accuracy": 0.6044776119402985
+    }
+  },
+  "heuristic_gate": {
+    "selected_threshold": {
+      "threshold": 0.3965581595897674,
+      "recall": 0.9,
+      "precision": 0.36,
+      "verify_rate": 0.7100149476831091
+    },
+    "train_metrics": {
+      "threshold": 0.3965581595897674,
+      "tp": 171.0,
+      "fp": 304.0,
+      "tn": 175.0,
+      "fn": 19.0,
+      "precision": 0.36,
+      "recall": 0.9,
+      "verify_rate": 0.7100149476831091,
+      "false_accept_rate": 0.1,
+      "safe_accept_rate": 0.3653444676409186,
+      "accuracy": 0.5171898355754858
+    },
+    "validation_metrics": {
+      "threshold": 0.3965581595897674,
+      "tp": 35.0,
+      "fp": 59.0,
+      "tn": 29.0,
+      "fn": 11.0,
+      "precision": 0.3723404255319149,
+      "recall": 0.7608695652173914,
+      "verify_rate": 0.7014925373134329,
+      "false_accept_rate": 0.2391304347826087,
+      "safe_accept_rate": 0.32954545454545453,
+      "accuracy": 0.47761194029850745
+    }
+  }
+}

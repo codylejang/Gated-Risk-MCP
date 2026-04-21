@@ -1,0 +1,73 @@
+{
+  "extractor_dir": "Outputs/sroie_extraction/mlp_neural",
+  "model_type": "mlp",
+  "target_recall": 0.9,
+  "learned_gate": {
+    "selected_threshold": {
+      "threshold": 0.4022302031517029,
+      "recall": 0.9,
+      "precision": 0.3904109589041096,
+      "verify_rate": 0.6547085201793722
+    },
+    "train_metrics": {
+      "threshold": 0.4022302031517029,
+      "tp": 171.0,
+      "fp": 267.0,
+      "tn": 212.0,
+      "fn": 19.0,
+      "precision": 0.3904109589041096,
+      "recall": 0.9,
+      "verify_rate": 0.6547085201793722,
+      "false_accept_rate": 0.1,
+      "safe_accept_rate": 0.44258872651356995,
+      "accuracy": 0.5724962630792227
+    },
+    "validation_metrics": {
+      "threshold": 0.4022302031517029,
+      "tp": 39.0,
+      "fp": 51.0,
+      "tn": 37.0,
+      "fn": 7.0,
+      "precision": 0.43333333333333335,
+      "recall": 0.8478260869565217,
+      "verify_rate": 0.6716417910447762,
+      "false_accept_rate": 0.15217391304347827,
+      "safe_accept_rate": 0.42045454545454547,
+      "accuracy": 0.5671641791044776
+    }
+  },
+  "heuristic_gate": {
+    "selected_threshold": {
+      "threshold": 0.3965581595897674,
+      "recall": 0.9,
+      "precision": 0.36,
+      "verify_rate": 0.7100149476831091
+    },
+    "train_metrics": {
+      "threshold": 0.3965581595897674,
+      "tp": 171.0,
+      "fp": 304.0,
+      "tn": 175.0,
+      "fn": 19.0,
+      "precision": 0.36,
+      "recall": 0.9,
+      "verify_rate": 0.7100149476831091,
+      "false_accept_rate": 0.1,
+      "safe_accept_rate": 0.3653444676409186,
+      "accuracy": 0.5171898355754858
+    },
+    "validation_metrics": {
+      "threshold": 0.3965581595897674,
+      "tp": 35.0,
+      "fp": 59.0,
+      "tn": 29.0,
+      "fn": 11.0,
+      "precision": 0.3723404255319149,
+      "recall": 0.7608695652173914,
+      "verify_rate": 0.7014925373134329,
+      "false_accept_rate": 0.2391304347826087,
+      "safe_accept_rate": 0.32954545454545453,
+      "accuracy": 0.47761194029850745
+    }
+  }
+}
