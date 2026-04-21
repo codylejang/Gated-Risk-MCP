@@ -64,9 +64,9 @@ FEATURE_COLS = [
 class RiskGateConfig:
     """config for risk gate training."""
     model_path: Path = Path("models/risk_gate.pkl")
-    threshold_low: float = 0.3
-    threshold_high: float = 0.6
-    random_state: int = 42
+    threshold_low: float = 0.6
+    threshold_high: float = 0.95
+    random_state: int = 60
     test_size: float = 0.2
     n_estimators: int = 100
     max_depth: int = 4
@@ -133,7 +133,7 @@ def train_risk_gate(
 
     # evaluate
     y_pred_proba = clf.predict_proba(X_val)[:, 1]
-    y_pred = (y_pred_proba >= 0.5).astype(int)
+    y_pred = (y_pred_proba >= config.threshold_low).astype(int)
 
     auc = roc_auc_score(y_val, y_pred_proba)
     brier = brier_score_loss(y_val, y_pred_proba)
