@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 
@@ -57,8 +58,9 @@ def _count_exact_matches(tokens: list[str], value: str) -> int:
 
 
 def add_receipt_ratios(df: pd.DataFrame) -> pd.DataFrame:
-    """Add simple ratio features that mirror the SROIE tabular approach."""
+    """Add ratio, transformed arithmetic, and proxy-rule helper columns."""
     df = df.copy()
+
     df["token_box_ratio"] = df["n_tokens"] / df["n_boxes"].clip(lower=1)
     df["amount_token_ratio"] = df["n_amount_like_tokens"] / df["n_tokens"].clip(lower=1)
     df["anchor_count"] = (
@@ -69,6 +71,20 @@ def add_receipt_ratios(df: pd.DataFrame) -> pd.DataFrame:
         + df["has_change_anchor"].astype(int)
     )
     df["menu_token_ratio"] = df["menu_count"] / df["n_tokens"].clip(lower=1)
+
+    # stabilize the arithmetic inconsistency feature so extreme outliers do not dominate
+    df["total_math_gap_ratio_clipped"] = df["total_math_gap_ratio"].clip(upper=10.0)
+    df["log_total_math_gap_ratio"] = np.log1p(df["total_math_gap_ratio_clipped"])
+
+    # revised proxy-rule helper columns from notebook validation
+    df["extreme_token_count_v2"] = (df["n_tokens"] < 15) | (df["n_tokens"] > 100)
+    df["too_many_total_matches_v2"] = df["exact_total_matches"] > 2
+    df["missing_tax_anchor_v2"] = df["tax_present"] & (~df["has_tax_anchor"])
+    df["missing_total_anchor_v2"] = df["total_present"] & (~df["has_total_anchor"])
+    df["large_total_math_gap_v2"] = (
+        df["total_math_check_available"] & (df["total_math_gap_ratio_clipped"] > 0.10)
+    )
+
     return df
 
 
@@ -151,37 +167,18 @@ def build_receipt_signal_frame(records: list[Any]) -> pd.DataFrame:
 
 
 def cord_review_label(row: pd.Series) -> int:
-    """Weak target: 1 means this CORD receipt should receive human verification."""
+    """Revised CORD review target: 1 means this receipt is review-worthy."""
     risk_signals = 0
 
-    if row.get("total_present") and not row.get("total_in_ocr"):
+    if row.get("extreme_token_count_v2", False):
         risk_signals += 1
-    if row.get("subtotal_present") and not row.get("subtotal_in_ocr"):
+    if row.get("too_many_total_matches_v2", False):
         risk_signals += 1
-    if row.get("tax_present") and not row.get("tax_in_ocr"):
+    if row.get("missing_tax_anchor_v2", False):
         risk_signals += 1
-    if row.get("service_present") and not row.get("service_in_ocr"):
+    if row.get("missing_total_anchor_v2", False):
         risk_signals += 1
-
-    if row.get("exact_total_matches", 0) > 2:
-        risk_signals += 1
-    if row.get("n_amount_like_tokens", 0) > 25:
-        risk_signals += 1
-
-    if row.get("total_present") and not row.get("has_total_anchor"):
-        risk_signals += 1
-    if row.get("tax_present") and not row.get("has_tax_anchor"):
-        risk_signals += 1
-
-    n_tokens = row.get("n_tokens", 0)
-    if n_tokens < 20 or n_tokens > 220:
-        risk_signals += 1
-
-    if row.get("menu_count", 0) >= 10 and n_tokens < 60:
-        risk_signals += 1
-
-    if row.get("total_math_check_available") and row.get("total_math_gap_ratio", 0.0) > 0.03:
+    if row.get("large_total_math_gap_v2", False):
         risk_signals += 1
 
     return 1 if risk_signals >= 2 else 0
-

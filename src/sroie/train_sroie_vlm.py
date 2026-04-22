@@ -5,11 +5,11 @@ import json
 from pathlib import Path
 import sys
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.sroie_vlm import SROIENeuralVLM, SROIEVLMBaseline, split_records
+from src.sroie.sroie_vlm import SROIENeuralVLM, SROIEVLMBaseline, split_records
 from utils.data_utils import load_sroie_split
 
 

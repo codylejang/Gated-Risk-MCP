@@ -22,12 +22,12 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 
 import sys
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.data_utils import load_sroie_split, DocumentRecord
-from src.sroie_features import (
+from src.sroie.sroie_features import (
     sroie_feature_dataframe,
     add_derived_features,
     sroie_proxy_label_dataframe,

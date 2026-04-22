@@ -21,7 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.data_utils import load_cord_split
-from src.cord_risk.receipt_signals import (
+from src.cord.receipt_signals import (
     add_receipt_ratios,
     build_receipt_signal_frame,
     cord_review_label,
@@ -30,7 +30,6 @@ from src.cord_risk.receipt_signals import (
 
 FEATURE_COLUMNS = [
     "n_tokens",
-    "n_boxes",
     "menu_count",
     "total_len",
     "subtotal_len",
@@ -45,12 +44,12 @@ FEATURE_COLUMNS = [
     "has_tax_anchor",
     "has_cash_anchor",
     "has_change_anchor",
-    "token_box_ratio",
     "amount_token_ratio",
     "anchor_count",
     "menu_token_ratio",
-    "total_math_gap_ratio",
     "total_math_check_available",
+    "total_math_gap_ratio_clipped",
+    "log_total_math_gap_ratio",
 ]
 
 
@@ -60,7 +59,7 @@ class CordGateConfig:
     report_path: Path = Path("Outputs/cord_review_gate/metrics.json")
     threshold_low: float = 0.3
     threshold_high: float = 0.6
-    random_state: int = 42
+    random_state: int = 60
     test_size: float = 0.2
 
 
@@ -105,6 +104,15 @@ def train_cord_review_gate(config: CordGateConfig, data_root: Path | None = None
     preds = (probs >= 0.5).astype(int)
     precision, recall, f1, _ = precision_recall_fscore_support(y_val, preds, average="binary")
 
+    importances: dict[str, float] = {}
+    for calibrated_model in model.calibrated_classifiers_:
+        base_model = calibrated_model.estimator
+        for i, col in enumerate(FEATURE_COLUMNS):
+            importances[col] = importances.get(col, 0.0) + float(base_model.feature_importances_[i])
+
+    for col in importances:
+        importances[col] /= len(model.calibrated_classifiers_)
+
     metrics = {
         "auc": float(roc_auc_score(y_val, probs)),
         "brier_score": float(brier_score_loss(y_val, probs)),
@@ -126,6 +134,7 @@ def train_cord_review_gate(config: CordGateConfig, data_root: Path | None = None
                 "threshold_low": config.threshold_low,
                 "threshold_high": config.threshold_high,
                 "metrics": metrics,
+                "feature_importance": importances,
             },
             file,
         )
@@ -133,7 +142,12 @@ def train_cord_review_gate(config: CordGateConfig, data_root: Path | None = None
     config.report_path.parent.mkdir(parents=True, exist_ok=True)
     config.report_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
-    return {"metrics": metrics, "model_path": str(config.model_path), "report_path": str(config.report_path)}
+    return {
+        "metrics": metrics,
+        "feature_importance": importances,
+        "model_path": str(config.model_path),
+        "report_path": str(config.report_path),
+    }
 
 
 def run_inference(model_path: Path, data_root: Path | None = None, split: str = "validation") -> pd.DataFrame:
@@ -176,6 +190,15 @@ def main() -> None:
         print(f"metrics saved to {result['report_path']}")
         for key, value in result["metrics"].items():
             print(f"{key}: {value:.4f}" if isinstance(value, float) else f"{key}: {value}")
+
+        print("feature importance:")
+        sorted_importance = sorted(
+            result["feature_importance"].items(),
+            key=lambda x: -x[1],
+        )
+        for feature, importance in sorted_importance[:10]:
+            print(f"{feature}: {importance:.4f}")
+
         return
 
     result_df = run_inference(args.model_path, data_root=args.data_root, split=args.split)
