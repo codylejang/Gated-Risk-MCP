@@ -12,3 +12,6 @@ env/
 
 *.pth
 *.pt
+
+.claude
+.venv-ocr
