@@ -1,7 +1,8 @@
 """
-risk gate: train and inference pipeline for extraction uncertainty scoring.
-outputs a calibrated probability that an extraction is risky/uncertain.
-can be used standalone or as an mcp tool.
+Experimental learned SROIE risk scorer.
+Outputs a calibrated probability that a receipt should be reviewed,
+using the notebook-finalized SROIE proxy target.
+The primary practical SROIE gate is rule-based in sroie_rule_gate.py.
 """
 from __future__ import annotations
 
@@ -64,12 +65,12 @@ FEATURE_COLS = [
 class RiskGateConfig:
     """config for risk gate training."""
     model_path: Path = Path("models/risk_gate.pkl")
-    threshold_low: float = 0.6
-    threshold_high: float = 0.95
+    threshold_low: float = 0.3
+    threshold_high: float = 0.6
     random_state: int = 60
     test_size: float = 0.2
     n_estimators: int = 100
-    max_depth: int = 4
+    max_depth: int = 3
     learning_rate: float = 0.1
 
 
@@ -109,11 +110,12 @@ def train_risk_gate(
 
     # prepare features and labels
     X = df[FEATURE_COLS].values.astype(np.float32)
-    y = df["proxy_verify"].astype(int).values
+    y = df["review_worthy"].astype(int).values
 
-    # train/val split
+
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y,
+        X,
+        y,
         test_size=config.test_size,
         random_state=config.random_state,
         stratify=y,
@@ -168,6 +170,7 @@ def train_risk_gate(
         pickle.dump({
             "model": clf,
             "feature_cols": FEATURE_COLS,
+            "target_col": "review_worthy",
             "config": {
                 "threshold_low": config.threshold_low,
                 "threshold_high": config.threshold_high,
@@ -185,8 +188,8 @@ def train_risk_gate(
 
 class RiskGate:
     """
-    risk gate inference class.
-    loads trained model and scores new documents.
+    Experimental learned SROIE scorer.
+    Loads a trained model and assigns review-risk scores to receipts.
     """
 
     def __init__(self, model_path: Optional[Path] = None):
@@ -195,6 +198,7 @@ class RiskGate:
         self.model_path = Path(model_path)
         self._model = None
         self._feature_cols = None
+        self._target_col = None
         self._config = None
         self._load()
 
@@ -206,6 +210,7 @@ class RiskGate:
             data = pickle.load(f)
         self._model = data["model"]
         self._feature_cols = data["feature_cols"]
+        self._target_col = data.get("target_col", "review_worthy")
 
         # handle both dict and dataclass config formats
         cfg = data.get("config", {})
@@ -279,6 +284,12 @@ def run_training(data_root: Optional[Path] = None) -> dict[str, Any]:
     result = train_risk_gate(records)
 
     print(f"model saved to {result['model_path']}")
+
+    print(f"target column: review_worthy")
+    print(f"threshold_low: {RiskGateConfig.threshold_low}")
+    print(f"threshold_high: {RiskGateConfig.threshold_high}")
+    print(f"random_state: {RiskGateConfig.random_state}")
+
     print("metrics:")
     for k, v in result["metrics"].items():
         print(f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}")
@@ -288,7 +299,56 @@ def run_training(data_root: Optional[Path] = None) -> dict[str, Any]:
     for feat, imp in sorted_imp[:10]:
         print(f"  {feat}: {imp:.4f}")
 
-    return result
+    print("\nrule gate reference (train-split, same target):")
+    try:
+        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+        from src.sroie.sroie_rule_gate import run_rule_inference
+
+        # rebuild the same train/validation split locally so rule metrics are directly comparable
+        cfg = RiskGateConfig()
+        feature_df = sroie_feature_dataframe(records)
+        feature_df = _ensure_feature_dataframe(feature_df)
+        label_df = sroie_proxy_label_dataframe(feature_df)
+        compare_df = feature_df.merge(label_df, on="doc_id", how="left")
+
+        y_compare = compare_df["review_worthy"].astype(int).values
+        all_idx = np.arange(len(compare_df))
+        _, val_idx = train_test_split(
+            all_idx,
+            test_size=cfg.test_size,
+            random_state=cfg.random_state,
+            stratify=y_compare,
+        )
+
+        val_doc_ids = compare_df.iloc[val_idx]["doc_id"].tolist()
+        y_val_rule = y_compare[val_idx]
+
+        rule_df = run_rule_inference(data_root=data_root, split="train")
+        rule_val_df = rule_df.set_index("doc_id").loc[val_doc_ids].reset_index()
+
+        rule_pred = rule_val_df["action"].isin(["review", "human_required"]).astype(int).values
+        rule_metrics = {
+            "accuracy": accuracy_score(y_val_rule, rule_pred),
+            "precision": precision_score(y_val_rule, rule_pred, zero_division=0),
+            "recall": recall_score(y_val_rule, rule_pred, zero_division=0),
+            "f1": f1_score(y_val_rule, rule_pred, zero_division=0),
+            "pred_verify_rate": float(rule_pred.mean()),
+        }
+
+        print(
+            f"  rule_based_review_gate: "
+            f"accuracy={rule_metrics['accuracy']:.4f}, "
+            f"precision={rule_metrics['precision']:.4f}, "
+            f"recall={rule_metrics['recall']:.4f}, "
+            f"f1={rule_metrics['f1']:.4f}, "
+            f"pred_verify_rate={rule_metrics['pred_verify_rate']:.4f}"
+        )
+
+        print("  rule action distribution on train split:")
+        print(rule_df["action"].value_counts().to_string())
+
+    except Exception as e:
+        print(f"  could not load rule gate reference output: {e}")
 
 
 def run_inference(

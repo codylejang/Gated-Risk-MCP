@@ -174,40 +174,20 @@ def sroie_feature_dataframe(records: list[Any]) -> pd.DataFrame:
 
 
 def sroie_proxy_label_dataframe(feature_df: pd.DataFrame) -> pd.DataFrame:
-    """Build more selective proxy verification labels from the feature table."""
+    """Build SROIE hard-flag columns plus strict and broader review targets."""
     df = feature_df.copy()
 
-    df["company_hard"] = (
-        (~df["company_present"])
-        | ((~df["company_in_ocr"]) & (~df["ocr_is_empty"]))
-    )
-
-    df["date_hard"] = (
-        (~df["date_present"])
-        | (~df["date_in_ocr"])
-        | ((df["n_date_like_tokens"] > 1) & (~df["date_in_ocr"]))
-    )
-
-    df["address_hard"] = (
-        (~df["address_present"])
-        | ((~df["address_in_ocr"]) & (~df["ocr_is_empty"]))
-    )
-
-    df["total_hard"] = (
-        (~df["total_present"])
-        | (~df["total_in_ocr"])
-        | ((df["exact_total_matches"] == 0) & (~df["ocr_is_empty"]))
-        | (
-            (df["n_amount_like_tokens"] >= 25)
-            & (df["exact_total_matches"] >= 2)
-            & (~df["has_total_anchor"])
-        )
-    )
+    # finalized notebook-aligned hard flags:
+    # field missing OR labeled field not recoverable from OCR
+    df["company_hard"] = (~df["company_present"]) | (~df["company_in_ocr"])
+    df["date_hard"] = (~df["date_present"]) | (~df["date_in_ocr"])
+    df["address_hard"] = (~df["address_present"]) | (~df["address_in_ocr"])
+    df["total_hard"] = (~df["total_present"]) | (~df["total_in_ocr"])
 
     df["low_ocr_support"] = (
-        df["ocr_is_empty"]
-        | (df["n_tokens"] <= 20)
-        | (df["ocr_word_count"] <= 35)
+        (df["n_tokens"] <= 35)
+        | (df["ocr_word_count"] <= 40)
+        | df["ocr_is_empty"]
     )
 
     df["proxy_risk_score"] = (
@@ -218,8 +198,22 @@ def sroie_proxy_label_dataframe(feature_df: pd.DataFrame) -> pd.DataFrame:
         + df["low_ocr_support"].astype(int)
     )
 
-    df["proxy_verify"] = df["proxy_risk_score"] >= 2
-    df["proxy_high_risk"] = df["proxy_risk_score"] >= 3
+    # strict target: two or more hard field failures
+    df["strict_high_risk"] = (
+        df[["company_hard", "date_hard", "address_hard", "total_hard"]]
+        .sum(axis=1) >= 2
+    )
+
+    # broader target: address/company hard, or both date and total hard
+    df["review_worthy"] = (
+        df["address_hard"]
+        | df["company_hard"]
+        | (df[["date_hard", "total_hard"]].sum(axis=1) >= 2)
+    )
+
+    # backward compatibility
+    df["proxy_verify"] = df["strict_high_risk"]
+    df["proxy_high_risk"] = df["strict_high_risk"]
 
     keep_cols = [
         "doc_id",
@@ -229,6 +223,8 @@ def sroie_proxy_label_dataframe(feature_df: pd.DataFrame) -> pd.DataFrame:
         "total_hard",
         "low_ocr_support",
         "proxy_risk_score",
+        "strict_high_risk",
+        "review_worthy",
         "proxy_verify",
         "proxy_high_risk",
     ]
